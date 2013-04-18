@@ -52,6 +52,15 @@ config PWM_AB8500
 	  To compile this driver as a module, choose M here: the module
 	  will be called pwm-ab8500.
 
+config PWM_BCM2708
+	tristate "BCM2708 PWM support"
+	depends on MACH_BCM2708
+	help
+	  Generic PWM framework driver for BCM2708 (Raspberry Pi).
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called pwm-bcm2708.
+
 config PWM_BFIN
 	tristate "Blackfin PWM support"
 	depends on BFIN_GPTIMERS

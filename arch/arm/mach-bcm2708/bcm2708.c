@@ -436,6 +436,32 @@ static struct platform_device bcm2708_gpio_device = {
 };
 #endif
 
+#if defined(CONFIG_PWM_BCM2708) || defined(CONFIG_PWM_BCM2708_MODULE)
+#define BCM_PWM_DRIVER_NAME "bcm2708-pwm"
+
+static struct resource bcm2708_pwm_resources[] = {
+	[0] = {			/* PWM, part of GPIO */
+		.start = PWM_BASE,
+		.end = PWM_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+		},
+};
+
+static u64 pwm_dmamask = DMA_BIT_MASK(DMA_MASK_BITS_COMMON);
+
+static struct platform_device bcm2708_pwm_device = {
+	.name = BCM_PWM_DRIVER_NAME,
+	.id = -1,
+	.resource = bcm2708_pwm_resources,
+	.num_resources = ARRAY_SIZE(bcm2708_pwm_resources),
+	.dev = {
+		.dma_mask = &pwm_dmamask,
+		.coherent_dma_mask = DMA_BIT_MASK(DMA_MASK_BITS_COMMON),
+		},
+};
+
+#endif
+
 static struct resource bcm2708_systemtimer_resources[] = {
 	[0] = {			/* system timer access */
 	       .start = ST_BASE,
@@ -708,6 +734,9 @@ void __init bcm2708_init(void)
 	bcm_register_device(&bcm2708_vcio_device);
 #ifdef CONFIG_BCM2708_GPIO
 	bcm_register_device(&bcm2708_gpio_device);
+#endif
+#if defined(CONFIG_PWM_BCM2708) || defined(CONFIG_PWM_BCM2708_MODULE)
+	bcm_register_device(&bcm2708_pwm_device);
 #endif
 #if defined(CONFIG_W1_MASTER_GPIO) || defined(CONFIG_W1_MASTER_GPIO_MODULE)
 	platform_device_register(&w1_device);

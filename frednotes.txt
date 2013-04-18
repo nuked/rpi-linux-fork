@@ -1,0 +1,39 @@
+Fred Notes
+----------
+
+default config for raspberry-pi in tree:
+    cp arch/arm/configs/bcmrpi_defconfig .config
+
+ensure up-to-date config:
+    export CCPREFIX=/usr/bin/arm-linux-gnueabi-
+    make ARCH=arm CROSS_COMPILE=${CCPREFIX} oldconfig
+
+menuconfig:
+    make ARCH=arm CROSS_COMPILE=${CCPREFIX} menuconfig
+
+compile proper:
+    make ARCH=arm CROSS_COMPILE=${CCPREFIX}
+    make ARCH=arm CROSS_COMPILE=${CCPREFIX} modules
+
+kernel dumped in:
+    scp arch/arm/boot/Image root@rberry:/boot/kernel_esl.img
+
+to boot, edit /boot/config.txt, e.g.:
+    kernel=kernel_esl.img
+    # kernel=kernel.img
+
+transfer modules:
+    export MODULES_TEMP=~/r-pi/modules-install
+    make ARCH=arm CROSS_COMPILE=${CCPREFIX} INSTALL_MOD_PATH=${MODULES_TEMP} modules_install
+    rsync -e ssh -avuz ${MODULES_TEMP}/ root@rberry:/
+
+
+--------------------------------------------------------------------------------------------
+
+Specific to the PWM on the Raspberry-Pi:
+
+ - module auto-loads since PWM wotsits configured in bcm2708.c (platform device).
+ - to export controls to userspace:
+    echo 0 > /sys/class/pwm/export
+
+
