@@ -28,6 +28,21 @@ menuconfig PWM
 
 if PWM
 
+config PWM_SYSFS
+	bool "/sys/class/pwm/... (sysfs interface)"
+	depends on SYSFS
+	help
+	  Say Y here to add a sysfs interface for PWMs.
+
+	  This exports directories and files to userspace using sysfs.
+	  This way the PWM outputs of a device can easyly be used,
+	  controlled and tested. For every instance of an PWM capable
+	  device there is a pwmchipX directory exported to
+	  /sys/class/pwm. If you want to use a PWM, you have to export
+	  it to sysfs, which is done by writing the number into
+	  /sys/class/pwm/export. After that /sys/class/pwm/pwmX is
+	  reaady to be used.
+
 config PWM_AB8500
 	tristate "AB8500 PWM support"
 	depends on AB8500_CORE && ARCH_U8500
