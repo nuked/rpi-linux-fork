@@ -143,7 +143,17 @@ static struct map_desc bcm2708_io_desc[] __initdata = {
 	 .virtual = IO_ADDRESS(GPIO_BASE),
 	 .pfn = __phys_to_pfn(GPIO_BASE),
 	 .length = SZ_4K,
-	 .type = MT_DEVICE}
+	 .type = MT_DEVICE},
+	{
+	 .virtual = IO_ADDRESS(PWM_BASE),
+	 .pfn = __phys_to_pfn(PWM_BASE),
+	 .length = SZ_4K,
+	 .type = MT_DEVICE},
+	{
+	 .virtual = IO_ADDRESS(CPRMAN_BASE),
+	 .pfn = __phys_to_pfn(CPRMAN_BASE),
+	 .length = SZ_4K,
+	 .type = MT_DEVICE},
 };
 
 void __init bcm2708_map_io(void)
@@ -443,6 +453,11 @@ static struct resource bcm2708_pwm_resources[] = {
 	[0] = {			/* PWM, part of GPIO */
 		.start = PWM_BASE,
 		.end = PWM_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+		},
+	[1] = {			/* CPRMAN (clock manager), needed for PWM */
+		.start = CPRMAN_BASE,
+		.end = CPRMAN_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 		},
 };

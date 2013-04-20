@@ -9,6 +9,11 @@
  *
  */
 
+/*
+ * Fred Barnes, April 2013: Updated to allow other modules to change
+ * GPIO pins to alternative functions.
+ */
+
 #include <linux/spinlock.h>
 #include <linux/module.h>
 #include <linux/list.h>
@@ -39,11 +44,9 @@
 #define GPIOUD(x)    (0x94+(x)*4)
 #define GPIOUDCLK(x) (0x98+(x)*4)
 
-enum { GPIO_FSEL_INPUT, GPIO_FSEL_OUTPUT,
-	GPIO_FSEL_ALT5, GPIO_FSEL_ALT_4,
-	GPIO_FSEL_ALT0, GPIO_FSEL_ALT1,
-	GPIO_FSEL_ALT2, GPIO_FSEL_ALT3,
-};
+
+/* Note: GPIO_FSEL_... enum values now in mach/gpio.h */
+
 
 	/* Each of the two spinlocks protects a different set of hardware
 	 * regiters and data structurs. This decouples the code of the IRQ from
@@ -59,6 +62,12 @@ struct bcm2708_gpio {
 	unsigned long rising;
 	unsigned long falling;
 };
+
+/* same lock also protects this global (horrid, but easier than digging through common GPIO code
+ * to find this specific platform driver for the time-being).
+ */
+static struct bcm2708_gpio *bcm2708_platform_gpio = NULL;
+
 
 static int bcm2708_set_function(struct gpio_chip *gc, unsigned offset,
 				int function)
@@ -84,6 +93,75 @@ static int bcm2708_set_function(struct gpio_chip *gc, unsigned offset,
 
 	return 0;
 }
+
+static int bcm2708_get_function(struct gpio_chip *gc, unsigned offset)
+{
+	struct bcm2708_gpio *gpio = container_of(gc, struct bcm2708_gpio, gc);
+	unsigned long flags;
+	unsigned gpiodir;
+	unsigned gpio_bank = offset / 10;
+	unsigned gpio_field_offset = (offset - 10 * gpio_bank) * 3;
+	int function;
+
+	if (offset >= ARCH_NR_GPIOS) {
+		return -EINVAL;
+	}
+
+	spin_lock_irqsave (&lock, flags);
+	/* just to make sure no-one else is trying to write at this point */
+	gpiodir = readl (gpio->base + GPIOFSEL (gpio_bank));
+	spin_unlock_irqrestore (&lock, flags);
+	gpiodir >>= gpio_field_offset;
+	function = gpiodir & 0x07;
+
+	return function;
+}
+
+int bcm2708_gpio_platform_setfcn (unsigned offset, int function)
+{
+	unsigned long flags;
+	int err = 0;
+	struct gpio_chip *gc = NULL;
+
+	spin_lock_irqsave (&lock, flags);
+	if (!bcm2708_platform_gpio) {
+		err = -EINVAL;
+	} else {
+		gc = &bcm2708_platform_gpio->gc;
+	}
+	spin_unlock_irqrestore (&lock, flags);
+
+	if (gc) {
+		err = bcm2708_set_function (gc, offset, function);
+	}
+
+	return err;
+}
+
+EXPORT_SYMBOL(bcm2708_gpio_platform_setfcn);
+
+int bcm2708_gpio_platform_getfcn (unsigned offset)
+{
+	unsigned long flags;
+	int err = -EINVAL;
+	struct gpio_chip *gc = NULL;
+
+	spin_lock_irqsave (&lock, flags);
+	if (!bcm2708_platform_gpio) {
+		err = -EINVAL;
+	} else {
+		gc = &bcm2708_platform_gpio->gc;
+	}
+	spin_unlock_irqrestore (&lock, flags);
+
+	if (gc) {
+		err = bcm2708_get_function (gc, offset);
+	}
+
+	return err;
+}
+
+EXPORT_SYMBOL(bcm2708_gpio_platform_getfcn);
 
 static int bcm2708_gpio_dir_in(struct gpio_chip *gc, unsigned offset)
 {
@@ -294,6 +372,9 @@ static int bcm2708_gpio_probe(struct platform_device *dev)
 	err = gpiochip_add(&ucb->gc);
 	if (err)
 		goto err;
+
+	/* make available to other code via ugly static */
+	bcm2708_platform_gpio = ucb;
 
 err:
 	return err;

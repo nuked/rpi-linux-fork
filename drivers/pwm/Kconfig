@@ -55,6 +55,7 @@ config PWM_AB8500
 config PWM_BCM2708
 	tristate "BCM2708 PWM support"
 	depends on MACH_BCM2708
+	depends on BCM2708_GPIO
 	help
 	  Generic PWM framework driver for BCM2708 (Raspberry Pi).
 
