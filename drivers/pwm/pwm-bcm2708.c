@@ -25,7 +25,7 @@
 #include <linux/kernel.h>
 #include <linux/delay.h>
 
-#define DEBUG
+// #define DEBUG
 
 #include <linux/platform_device.h>
 #include <linux/slab.h>
@@ -221,13 +221,13 @@ static int bcm2708_pwm_config (struct pwm_chip *chip, struct pwm_device *pwm, in
 		dev_err (chip->dev, "cannot set period less than 52ns (19.2 MHz clock)\n");
 		return -EINVAL;
 	}
-	bc_pwm->clk_div = 1;
-	tmp = (u64)period_ns * 192;
+	bc_pwm->clk_div = 32;
+	tmp = (u64)period_ns * (192 / bc_pwm->clk_div);
 	do_div (tmp, 10000);
 	bc_pwm->range = (u32)tmp;
 
 	act_period = (u64)bc_pwm->range * 10000;
-	do_div (act_period, 192);
+	do_div (act_period, (192 / bc_pwm->clk_div));
 
 	/* Note: act_period <= period_ns, because of rounding */
 	tmp = act_period * 100;
@@ -245,12 +245,12 @@ static int bcm2708_pwm_config (struct pwm_chip *chip, struct pwm_device *pwm, in
 	} else {
 		u64 act_duty;
 
-		tmp = (u64)duty_ns * 192;
+		tmp = (u64)duty_ns * (192 / bc_pwm->clk_div);
 		do_div (tmp, 10000);
 		bc_pwm->data = (u32)tmp;
 
 		act_duty = (u64)bc_pwm->data * 10000;
-		do_div (act_duty, 192);
+		do_div (act_duty, (192 / bc_pwm->clk_div));
 
 		/* Note: act_duty <= duty_ns, because of rounding */
 		tmp = act_period * 100;
@@ -303,6 +303,7 @@ static int bcm2708_pwm_enable (struct pwm_chip *chip, struct pwm_device *pwm)
 		dev_err (chip->dev, "failed to set pin %d mode to %d (error %d)\n", bc_pwm->pin, RPI_PWM_GPIO_PIN_FSEL, err);
 		goto l_err;
 	}
+	udelay (110);
 
 	/* then, configure PWM clock */
 	/* FIXME: racey;  ought to have some infrastructure or lock for this */
